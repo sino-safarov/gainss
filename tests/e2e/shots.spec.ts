@@ -35,6 +35,12 @@ test('screenshots', async ({ page }) => {
   await page.getByTestId('import-file').setInputFiles(file)
   await page.getByText('Данные восстановлены из копии.').waitFor()
 
+  // PDF report built from the demo data.
+  await page.getByRole('button', { name: 'Отчёт в PDF' }).click()
+  const pdf = page.waitForEvent('download')
+  await page.getByRole('button', { name: /Сохранить PDF/ }).click()
+  await (await pdf).saveAs(`${dir}/report.pdf`)
+
   const shot = (name: string) => page.screenshot({ path: `${dir}/${name}.png`, fullPage: true })
   await page.getByRole('button', { name: 'Тренировка', exact: true }).click()
   await shot('1-home')

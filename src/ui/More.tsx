@@ -3,6 +3,7 @@ import { useRef, useState } from 'react'
 import { importBackup, parseBackup, saveBackupFile } from '../backup'
 import { db, DEFAULT_REST, getMeta, setMeta } from '../db'
 import { MUSCLES, MUSCLE_KEYS, type Exercise, type Muscle, type PlanItem, type Template } from '../types'
+import { ReportButton } from './ReportButton'
 import { ExercisePicker, fmtClock, fmtDate, NumField, Sheet, useExercises } from './common'
 
 function TemplateEditor({ id, onClose }: { id: number; onClose: () => void }) {
@@ -217,6 +218,15 @@ export function More() {
           min={15}
           onChange={(v) => void setMeta('restSeconds', Math.round(v))}
         />
+      </div>
+
+      <h2>Отчёт</h2>
+      <div className="card">
+        <p className="muted small">
+          Статистика, календарь активности, баланс мышц, диаграммы и таблица рекордов одним PDF-файлом. Это отчёт для
+          чтения: восстановить данные из него нельзя, для этого нужна резервная копия ниже.
+        </p>
+        <ReportButton />
       </div>
 
       <h2>Резервная копия</h2>

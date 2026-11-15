@@ -31,6 +31,7 @@ async function benchSession(page: Page, kg: string, count: string, sets = 4) {
 }
 
 test('logs a workout, then prefills and suggests more weight next time', async ({ page }) => {
+  await page.addInitScript(() => Object.defineProperty(navigator, 'canShare', { value: undefined }))
   await open(page)
   await startFirstTemplate(page)
 
@@ -73,6 +74,17 @@ test('logs a workout, then prefills and suggests more weight next time', async (
   await expect(page.getByRole('img', { name: 'Календарь тренировок' })).toBeVisible()
   await expect(page.getByRole('img', { name: 'Манекен, вид спереди' })).toBeVisible()
   await expect(page.getByRole('button', { name: /Грудь.*подх\.\/нед/ })).toBeVisible()
+
+  // PDF report: built on the device and saved as a real PDF file.
+  await page.getByRole('button', { name: 'Отчёт в PDF' }).click()
+  const pdf = page.waitForEvent('download')
+  await page.getByRole('button', { name: /Сохранить PDF/ }).click()
+  const report = await pdf
+  expect(report.suggestedFilename()).toMatch(/^gainss-otchet-\d{4}-\d{2}-\d{2}\.pdf$/)
+  const bytes = await readFile(await report.path())
+  expect(bytes.subarray(0, 8).toString('latin1')).toBe('%PDF-1.4')
+  expect(bytes.length).toBeGreaterThan(50_000)
+  expect(bytes.toString('latin1')).toContain('/Count 2')
 
   // Progress shows the exercise with its records and this week's volume.
   await page.getByRole('button', { name: 'Прогресс' }).click()

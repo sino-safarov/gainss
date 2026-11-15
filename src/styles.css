@@ -961,3 +961,13 @@ select {
 .records dd small {
   font-weight: 400;
 }
+
+.report {
+  margin-top: 14px;
+}
+.card .report {
+  margin-top: 0;
+}
+.btn:disabled {
+  opacity: 0.6;
+}

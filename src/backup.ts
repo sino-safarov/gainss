@@ -46,29 +46,30 @@ export async function importBackup(backup: Backup, target: GainssDB = db): Promi
   })
 }
 
-/** Hands the backup file to the share sheet (Files / iCloud Drive) or downloads it. */
-export async function saveBackupFile(): Promise<boolean> {
-  const backup = await exportBackup()
-  const name = `gainss-${backup.exportedAt.slice(0, 10)}.json`
-  const file = new File([JSON.stringify(backup)], name, { type: 'application/json' })
-  let shared = false
+/** Hands a file to the share sheet (Files / iCloud Drive); downloads it where sharing is unavailable. */
+export async function deliverFile(file: File): Promise<boolean> {
   if (navigator.canShare?.({ files: [file] })) {
     try {
       await navigator.share({ files: [file] })
-      shared = true
+      return true
     } catch (e) {
       // Cancelled by the user: nothing was saved. Any other failure falls back to a download.
       if ((e as Error).name === 'AbortError') return false
     }
   }
-  if (!shared) {
-    const url = URL.createObjectURL(file)
-    const a = document.createElement('a')
-    a.href = url
-    a.download = name
-    a.click()
-    setTimeout(() => URL.revokeObjectURL(url), 10_000)
-  }
+  const url = URL.createObjectURL(file)
+  const a = document.createElement('a')
+  a.href = url
+  a.download = file.name
+  a.click()
+  setTimeout(() => URL.revokeObjectURL(url), 10_000)
+  return true
+}
+
+export async function saveBackupFile(): Promise<boolean> {
+  const backup = await exportBackup()
+  const name = `gainss-${backup.exportedAt.slice(0, 10)}.json`
+  if (!(await deliverFile(new File([JSON.stringify(backup)], name, { type: 'application/json' })))) return false
   await setMeta('lastBackupAt', Date.now())
   return true
 }
