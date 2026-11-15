@@ -7,6 +7,8 @@ const SUPABASE_URL = import.meta.env.VITE_SUPABASE_URL as string | undefined
 const SUPABASE_KEY = import.meta.env.VITE_SUPABASE_ANON_KEY as string | undefined
 /** Without these the app stays a local-only log and the account section is hidden. */
 export const cloudConfigured = Boolean(SUPABASE_URL && SUPABASE_KEY)
+/** Sign-in by e-mail code is built in but shown only when the server can send the code. */
+export const emailLoginEnabled = import.meta.env.VITE_EMAIL_LOGIN === 'on'
 
 export interface CloudUser {
   id: string

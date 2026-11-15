@@ -2,6 +2,7 @@ import { useState, type FormEvent } from 'react'
 import {
   cloudConfigured,
   deleteAccount,
+  emailLoginEnabled,
   replaceLocalData,
   sendEmailCode,
   signInWithGoogle,
@@ -82,7 +83,7 @@ function SignIn() {
       <button type="button" className="btn" disabled={busy} onClick={() => void run(signInWithGoogle)}>
         Войти через Google
       </button>
-      {sentTo === null ? (
+      {!emailLoginEnabled ? null : sentTo === null ? (
         <form onSubmit={send}>
           <input
             className="text"
