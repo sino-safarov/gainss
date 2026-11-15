@@ -165,3 +165,118 @@ export function muscleVolume(
   }
   return out
 }
+
+const startOfDay = (ts: number): number => {
+  const d = new Date(ts)
+  d.setHours(0, 0, 0, 0)
+  return d.getTime()
+}
+
+/** Adds whole calendar days in local time (safe across daylight-saving changes). */
+export const addDays = (ts: number, days: number): number => {
+  const d = new Date(ts)
+  d.setDate(d.getDate() + days)
+  return d.getTime()
+}
+
+export interface HeatDay {
+  ts: number
+  /** Working sets logged that day. */
+  count: number
+  /** 0 = nothing, 1–4 = intensity relative to the busiest day in the window. */
+  level: 0 | 1 | 2 | 3 | 4
+  future: boolean
+}
+
+/** Activity calendar: `weeks` columns of Monday-first days, ending with the current week. */
+export function heatmap(sets: SetEntry[], weeks: number, now: number): HeatDay[] {
+  const counts = new Map<number, number>()
+  for (const s of sets) {
+    if (s.warmup) continue
+    const day = startOfDay(s.ts)
+    counts.set(day, (counts.get(day) ?? 0) + 1)
+  }
+  const first = addDays(weekStart(now), -(weeks - 1) * 7)
+  const days = Array.from({ length: weeks * 7 }, (_, i) => {
+    const ts = addDays(first, i)
+    return { ts, count: counts.get(ts) ?? 0 }
+  })
+  const max = Math.max(1, ...days.map((d) => d.count))
+  return days.map((d) => ({
+    ...d,
+    level: (d.count === 0 ? 0 : Math.ceil((d.count / max) * 4)) as HeatDay['level'],
+    future: d.ts > now,
+  }))
+}
+
+export interface WeekTotals {
+  start: number
+  sets: number
+  tonnage: number
+  workouts: number
+}
+
+/** Totals for the last `weeks` calendar weeks, oldest first. */
+export function weeklySeries(sets: SetEntry[], weeks: number, now: number): WeekTotals[] {
+  const first = addDays(weekStart(now), -(weeks - 1) * 7)
+  const out = Array.from({ length: weeks }, (_, i) => ({
+    start: addDays(first, i * 7),
+    sets: 0,
+    tonnage: 0,
+    ids: new Set<number>(),
+  }))
+  for (const s of sets) {
+    if (s.warmup || s.ts < first) continue
+    const week = out.findLast((w) => w.start <= s.ts)
+    if (!week) continue
+    week.sets += 1
+    week.tonnage += s.weight * s.reps
+    week.ids.add(s.workoutId)
+  }
+  return out.map(({ ids, ...w }) => ({ ...w, workouts: ids.size }))
+}
+
+/** Consecutive weeks with at least one workout; the current week may still be empty. */
+export function weekStreak(workoutTimes: number[], now: number): number {
+  const weeks = new Set(workoutTimes.map(weekStart))
+  let cursor = weekStart(now)
+  if (!weeks.has(cursor)) cursor = addDays(cursor, -7)
+  let streak = 0
+  while (weeks.has(cursor)) {
+    streak += 1
+    cursor = addDays(cursor, -7)
+  }
+  return streak
+}
+
+export type MuscleStatus = 'none' | 'low' | 'mid' | 'ok' | 'high'
+
+/** Rates average weekly working sets against the usual 10–20 sets per muscle guideline. */
+export function muscleStatus(weeklySets: number): MuscleStatus {
+  if (weeklySets <= 0) return 'none'
+  if (weeklySets < 5) return 'low'
+  if (weeklySets < 10) return 'mid'
+  if (weeklySets <= 20) return 'ok'
+  return 'high'
+}
+
+const WEEK_MS = 7 * 24 * 60 * 60 * 1000
+
+/**
+ * Average weekly sets per muscle over the last four weeks — or over the
+ * history so far when it is shorter, so a new log is not rated as lagging.
+ */
+export function muscleBalance(
+  sets: SetEntry[],
+  exercises: Map<number, Pick<Exercise, 'muscle' | 'secondary'>>,
+  now: number,
+): Partial<Record<Muscle, number>> {
+  const work = sets.filter((s) => !s.warmup && s.ts <= now)
+  if (work.length === 0) return {}
+  const first = Math.min(...work.map((s) => s.ts))
+  const span = Math.min(4, Math.max(1, Math.ceil((now - first) / WEEK_MS)))
+  const totals = muscleVolume(work, exercises, now - span * WEEK_MS, now + 1)
+  const out: Partial<Record<Muscle, number>> = {}
+  for (const [m, v] of Object.entries(totals)) out[m as Muscle] = v.sets / span
+  return out
+}

@@ -2,7 +2,7 @@ import { useLiveQuery } from 'dexie-react-hooks'
 import { useState } from 'react'
 import { BACKUP_STALE_MS, saveBackupFile } from '../backup'
 import { db, deleteWorkout, getMeta, startWorkout } from '../db'
-import type { Workout } from '../types'
+import { MUSCLES, type Template, type Workout } from '../types'
 import { fmtDate, fmtNum, Sheet, useExercises } from './common'
 
 function WorkoutDetail({ workout, onClose }: { workout: Workout; onClose: () => void }) {
@@ -39,6 +39,12 @@ export function Home() {
   const history = useLiveQuery(() => db.workouts.where('status').equals('done').reverse().sortBy('startedAt'), [])
   const lastBackupAt = useLiveQuery(() => getMeta<number>('lastBackupAt', 0), [])
   const [detail, setDetail] = useState<Workout | null>(null)
+  const exercises = useExercises()
+
+  const musclesOf = (t: Template) =>
+    [...new Set(t.items.map((it) => exercises?.map.get(it.exerciseId)?.muscle).filter((m) => m !== undefined))]
+      .map((m) => MUSCLES[m])
+      .join(' · ')
 
   const lastDone = (templateId: number) => history?.find((w) => w.templateId === templateId)
   const firstWorkoutAt = history?.length ? history[history.length - 1].startedAt : null
@@ -50,7 +56,10 @@ export function Home() {
   return (
     <div className="screen">
       <header className="screen-head">
-        <h1>Тренировка</h1>
+        <div>
+          <p className="eyebrow">{new Date().toLocaleDateString('ru-RU', { weekday: 'long', day: 'numeric', month: 'long' })}</p>
+          <h1>Тренировка</h1>
+        </div>
       </header>
 
       {backupStale && (
@@ -63,13 +72,15 @@ export function Home() {
       )}
 
       <ul className="list">
-        {(templates ?? []).map((t) => {
+        {(templates ?? []).map((t, n) => {
           const last = lastDone(t.id)
           return (
             <li key={t.id}>
               <button type="button" className="row big" onClick={() => void startWorkout(t.name, t.items, t.id)}>
-                <span>
+                <span className="day-n">{n + 1}</span>
+                <span className="grow">
                   <strong>{t.name}</strong>
+                  <small className="muted">{musclesOf(t)}</small>
                   <small className="muted">
                     {t.items.length} упр.{last ? ` · последний раз ${fmtDate(last.startedAt)}` : ''}
                   </small>

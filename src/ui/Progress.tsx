@@ -9,10 +9,12 @@ import {
   sessionsOf,
   sessionVolume,
   topWeight,
+  weeklySeries,
   weekStart,
   type Session,
 } from '../domain/calc'
-import { MUSCLES, MUSCLE_KEYS, type Exercise } from '../types'
+import { MUSCLE_COLORS, MUSCLES, MUSCLE_KEYS, type Exercise } from '../types'
+import { BarChart, Donut, weekLabel } from './charts'
 import { fmtDate, fmtNum, LineChart, Sheet, useExercises } from './common'
 
 const WEEK = 7 * 24 * 60 * 60 * 1000
@@ -139,6 +141,13 @@ export function Progress() {
 
   const current = tracked.find((t) => t.ex.id === selected)
 
+  const weeks = weeklySeries(sets, 12, Date.now())
+  const month = muscleVolume(sets, exercises.map, thisWeek - 3 * WEEK, thisWeek + WEEK)
+  const slices = MUSCLE_KEYS.filter((m) => month[m])
+    .map((m) => ({ label: MUSCLES[m], value: month[m]!.sets, color: MUSCLE_COLORS[m] }))
+    .sort((a, b) => b.value - a.value)
+  const monthSets = slices.reduce((sum, s) => sum + s.value, 0)
+
   return (
     <div className="screen">
       <header className="screen-head">
@@ -167,6 +176,18 @@ export function Progress() {
           Рабочие подходы: эта неделя / прошлая. Вспомогательная мышца считается за полподхода. Тоннаж за неделю:{' '}
           {fmtNum(Object.values(now).reduce((sum, v) => sum + v.tonnage, 0) / 1000, 1)} т.
         </p>
+      )}
+
+      {sets.length > 0 && (
+        <>
+          <h2>Тоннаж по неделям</h2>
+          <BarChart
+            unit=" т"
+            bars={weeks.map((w, i) => ({ label: weekLabel(w.start), value: w.tonnage / 1000, current: i === weeks.length - 1 }))}
+          />
+          <h2>Распределение нагрузки</h2>
+          <Donut slices={slices} centre={fmtNum(monthSets, 0)} caption="подх. за 4 нед." />
+        </>
       )}
 
       <h2>Упражнения</h2>

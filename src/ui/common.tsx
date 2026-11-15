@@ -182,7 +182,16 @@ export function LineChart(props: { points: { x: number; y: number }[]; unit?: st
         </span>
       </figcaption>
       <svg viewBox={`0 0 ${W} ${H}`} role="img" aria-label="График">
+        <defs>
+          <linearGradient id="line-area" x1="0" y1="0" x2="0" y2="1">
+            <stop offset="0" stopColor="var(--accent)" stopOpacity="0.35" />
+            <stop offset="1" stopColor="var(--accent)" stopOpacity="0" />
+          </linearGradient>
+        </defs>
         <line x1={pad.l} x2={W - pad.r} y1={H - pad.b} y2={H - pad.b} className="axis" />
+        {points.length > 1 && (
+          <path d={`${path} L${sx(x1).toFixed(1)},${H - pad.b} L${sx(x0).toFixed(1)},${H - pad.b} Z`} fill="url(#line-area)" />
+        )}
         <path d={path} className="line" />
         {points.map((p, i) => (
           <circle key={i} cx={sx(p.x)} cy={sy(p.y)} r={points.length > 40 ? 1.5 : 3} className="dot" />

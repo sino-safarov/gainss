@@ -70,3 +70,18 @@ export interface Meta {
   key: string
   value: unknown
 }
+
+/** Categorical colours used when muscles are compared in one chart. */
+export const MUSCLE_COLORS: Record<Muscle, string> = {
+  chest: '#f87171',
+  back: '#60a5fa',
+  shoulders: '#fbbf24',
+  biceps: '#34d399',
+  triceps: '#a78bfa',
+  quads: '#f472b6',
+  hams: '#fb923c',
+  glutes: '#22d3ee',
+  calves: '#a3e635',
+  abs: '#e879f9',
+  forearms: '#94a3b8',
+}

@@ -67,9 +67,17 @@ test('logs a workout, then prefills and suggests more weight next time', async (
   await page.reload()
   await expect(page.getByRole('button', { name: new RegExp(`${BENCH}.*1/4`) })).toBeVisible()
 
+  // Profile: stats, activity calendar and the muscle map.
+  await page.getByRole('button', { name: 'Профиль' }).click()
+  await expect(page.getByText('тренировок всего')).toBeVisible()
+  await expect(page.getByRole('img', { name: 'Календарь тренировок' })).toBeVisible()
+  await expect(page.getByRole('img', { name: 'Манекен, вид спереди' })).toBeVisible()
+  await expect(page.getByRole('button', { name: /Грудь.*подх\.\/нед/ })).toBeVisible()
+
   // Progress shows the exercise with its records and this week's volume.
   await page.getByRole('button', { name: 'Прогресс' }).click()
-  await expect(page.getByText('Грудь')).toBeVisible()
+  await expect(page.getByText('Грудь').first()).toBeVisible()
+  await expect(page.getByText('Тоннаж по неделям')).toBeVisible()
   await page.getByRole('button', { name: new RegExp(BENCH) }).click()
   await expect(page.getByText('Личные рекорды')).toBeVisible()
   await expect(page.getByRole('definition').filter({ hasText: '82,5 кг × 6' })).toBeVisible()

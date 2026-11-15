@@ -136,3 +136,53 @@ describe('muscleVolume', () => {
     })
   })
 })
+
+import { addDays, heatmap, muscleBalance, muscleStatus, weeklySeries, weekStreak } from '../../src/domain/calc'
+
+describe('activity calendar and weekly totals', () => {
+  const now = new Date(2026, 10, 15, 18).getTime() // Sunday
+  const monday = weekStart(now)
+  const sets = [
+    set(1, 100, 5, { ts: monday + 1000 }),
+    set(1, 100, 5, { ts: monday + 2000 }),
+    set(1, 50, 5, { ts: monday + 3000, warmup: true }),
+    set(2, 60, 10, { ts: addDays(monday, -7) + 5000 }),
+  ]
+  it('builds Monday-first weeks ending with the current one', () => {
+    const days = heatmap(sets, 3, now)
+    expect(days).toHaveLength(21)
+    expect(days[14]).toMatchObject({ ts: monday, count: 2, level: 4, future: false })
+    expect(days[7]).toMatchObject({ count: 1, level: 2 })
+    expect(days[0].count).toBe(0)
+    expect(days[20].future).toBe(false)
+    expect(heatmap(sets, 1, monday + 1)[6].future).toBe(true)
+  })
+  it('sums sets, tonnage and workouts per week', () => {
+    expect(weeklySeries(sets, 2, now)).toEqual([
+      { start: addDays(monday, -7), sets: 1, tonnage: 600, workouts: 1 },
+      { start: monday, sets: 2, tonnage: 1000, workouts: 1 },
+    ])
+  })
+  it('counts the streak of weeks, tolerating an empty current week', () => {
+    expect(weekStreak([monday, addDays(monday, -7), addDays(monday, -21)], now)).toBe(2)
+    expect(weekStreak([addDays(monday, -7)], now)).toBe(1)
+    expect(weekStreak([addDays(monday, -14)], now)).toBe(0)
+  })
+})
+
+describe('muscle balance', () => {
+  it('rates weekly sets', () => {
+    expect([0, 3, 7, 10, 20, 21].map(muscleStatus)).toEqual(['none', 'low', 'mid', 'ok', 'ok', 'high'])
+  })
+  it('averages over the history so far, at most four weeks', () => {
+    const now = new Date(2026, 10, 15, 18).getTime()
+    const exercises = new Map([[1, { muscle: 'back' as Muscle, secondary: ['biceps'] as Muscle[] }]])
+    const recent = Array.from({ length: 12 }, (_, i) => set(1, 50, 10, { ts: now - 1000 - i }))
+    expect(muscleBalance(recent, exercises, now)).toEqual({ back: 12, biceps: 6 })
+    const older = [...recent, set(2, 50, 10, { ts: now - 9 * DAY })]
+    expect(muscleBalance(older, exercises, now)).toEqual({ back: 6.5, biceps: 3.25 })
+    const ancient = [...recent, set(3, 50, 10, { ts: now - 100 * DAY })]
+    expect(muscleBalance(ancient, exercises, now)).toEqual({ back: 3, biceps: 1.5 })
+    expect(muscleBalance([], exercises, now)).toEqual({})
+  })
+})
