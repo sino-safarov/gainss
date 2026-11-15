@@ -9,7 +9,11 @@ export default defineConfig({
     VitePWA({
       registerType: 'autoUpdate',
       includeAssets: ['apple-touch-icon.png', 'icon-192.png', 'icon-512.png'],
-      workbox: { globPatterns: ['**/*.{js,css,html,png,svg,webmanifest}'] },
+      workbox: {
+        globPatterns: ['**/*.{js,css,html,png,svg,webmanifest}'],
+        // A page of its own, not a route of the app.
+        navigateFallbackDenylist: [/\/privacy\.html/],
+      },
       manifest: {
         name: 'Gainss — дневник тренировок',
         short_name: 'Gainss',
