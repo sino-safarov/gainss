@@ -2,6 +2,40 @@ import Dexie, { type Table } from 'dexie'
 import { seedExercises, seedTemplates } from './seed'
 import type { BodyEntry, Exercise, Meta, PlanItem, SetEntry, Template, Workout } from './types'
 
+/** Tables that are synchronised with the account. */
+export const SYNCED = ['exercises', 'templates', 'workouts', 'sets', 'body'] as const
+
+let lastId = 0
+/** Ids are unique across devices, so records made offline on two phones never collide. */
+export function newId(): number {
+  const id = Date.now() * 1024 + Math.floor(Math.random() * 1024)
+  lastId = id > lastId ? id : lastId + 1
+  return lastId
+}
+
+const changeListeners = new Set<() => void>()
+let muted = 0
+/** Calls back after local data changes (not for changes applied by sync itself). */
+export function onLocalChange(listener: () => void): () => void {
+  changeListeners.add(listener)
+  return () => changeListeners.delete(listener)
+}
+export const muteLocalChange = (delta: 1 | -1) => void (muted += delta)
+const changed = () => {
+  if (!muted) for (const l of changeListeners) l()
+}
+
+export interface ShadowRow {
+  key: string
+  json: string
+}
+export interface SyncState {
+  key: 'state'
+  userId: string
+  email: string
+  cursor: string | null
+}
+
 export class GainssDB extends Dexie {
   exercises!: Table<Exercise, number>
   templates!: Table<Template, number>
@@ -9,6 +43,9 @@ export class GainssDB extends Dexie {
   sets!: Table<SetEntry, number>
   body!: Table<BodyEntry, number>
   meta!: Table<Meta, string>
+  /** Last synchronised content of every record, to tell what changed locally. */
+  shadow!: Table<ShadowRow, string>
+  syncState!: Table<SyncState, string>
 
   constructor(name = 'gainss') {
     super(name)
@@ -20,6 +57,16 @@ export class GainssDB extends Dexie {
       body: '++id, &date',
       meta: 'key',
     })
+    this.version(2).stores({ shadow: 'key', syncState: 'key' })
+    for (const name of SYNCED) {
+      const table = this.table(name)
+      table.hook('creating', (primKey) => {
+        changed()
+        return primKey === undefined ? newId() : undefined
+      })
+      table.hook('updating', () => void changed())
+      table.hook('deleting', () => void changed())
+    }
     this.on('populate', (tx) => {
       tx.table('exercises').bulkAdd(seedExercises)
       tx.table('templates').bulkAdd(seedTemplates)

@@ -971,3 +971,22 @@ select {
 .btn:disabled {
   opacity: 0.6;
 }
+
+.account form {
+  margin-top: 10px;
+}
+.account .text {
+  background: var(--bg);
+}
+.account-email {
+  font-weight: 700;
+  margin: 0 0 6px;
+  word-break: break-all;
+}
+.prose p {
+  margin: 0 0 12px;
+  line-height: 1.5;
+}
+.prose p:last-child {
+  margin-bottom: 0;
+}

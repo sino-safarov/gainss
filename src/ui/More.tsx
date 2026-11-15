@@ -3,6 +3,7 @@ import { useRef, useState } from 'react'
 import { importBackup, parseBackup, saveBackupFile } from '../backup'
 import { db, DEFAULT_REST, getMeta, setMeta } from '../db'
 import { MUSCLES, MUSCLE_KEYS, type Exercise, type Muscle, type PlanItem, type Template } from '../types'
+import { Account } from './Account'
 import { ReportButton } from './ReportButton'
 import { ExercisePicker, fmtClock, fmtDate, NumField, Sheet, useExercises } from './common'
 
@@ -188,6 +189,8 @@ export function More() {
       <header className="screen-head">
         <h1>Настройки</h1>
       </header>
+
+      <Account />
 
       <h2>Шаблоны тренировок</h2>
       <ul className="list">
